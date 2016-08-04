@@ -1,0 +1,19 @@
+apply plugin: 'c'
+
+model {
+    components {
+        pcieDriverLib(NativeLibrarySpec) {
+            sources {
+                c {
+                    source {
+                        srcDirs 'lib/pcie'
+                        include '**/*.c'
+                    }
+
+                    exportedHeaders.srcDir 'include/pcie'
+                    exportedHeaders.srcDir 'include/pcie/lib'
+                }
+            }
+        }
+    }
+}
