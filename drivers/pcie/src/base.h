@@ -38,7 +38,11 @@ static void pcidriver_exit(void);
  *
  */
 
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 8, 0)
+const struct pci_device_id pcidriver_ids[] = {
+#else
 DEFINE_PCI_DEVICE_TABLE(pcidriver_ids) = {
+#endif
   { PCI_DEVICE( PCIE_XILINX_VENDOR_ID, PCIE_ML605_DEVICE_ID ) },  // PCI-E Xilinx ML605
   { PCI_DEVICE(PCIE_XILINX_VENDOR_ID, PCIE_KC705_DEV_ID)}, // PCIe Xilinx KC705
   { PCI_DEVICE(PCIE_XILINX_VENDOR_ID, PCIE_AMC_DEV_ID)}, // PCIe Creotech AMC
@@ -55,11 +59,6 @@ int pcidriver_mmap_kmem( pcidriver_privdata_t *privdata, struct vm_area_struct *
 
 /*************************************************************************/
 /* Static data */
-/* Hold the allocated major & minor numbers */
-static dev_t pcidriver_devt;
-
-/* Number of devices allocated */
-static atomic_t pcidriver_deviceCount;
 
 /* Sysfs attributes */
 static DEVICE_ATTR(mmap_mode, (S_IRUGO | S_IWUSR | S_IWGRP), pcidriver_show_mmap_mode, pcidriver_store_mmap_mode);

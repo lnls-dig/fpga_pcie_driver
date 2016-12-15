@@ -31,8 +31,6 @@ typedef struct {
 typedef struct  {
 	dev_t devno;						/* device number (major and minor) */
 	struct pci_dev *pdev;				/* PCI device */
-	struct class_device *class_dev;		/* Class device */
-	struct cdev cdev;					/* char device struct */
 	int mmap_mode;						/* current mmap mode */
 	int mmap_area;						/* current PCI mmap area */
 
@@ -51,11 +49,15 @@ typedef struct  {
 	spinlock_t kmemlist_lock;			/* Spinlock to lock kmem list operations */
 	struct list_head kmem_list;			/* List of 'kmem_list_entry's associated with this device */
 	atomic_t kmem_count;				/* id for next kmem entry */
+	
+	atomic_t user_refcount;				/* Keeps track of user space clients */	
+	struct completion user_comp;			/* Used to wait for outstanding user space clients before dev removal */
 
 	spinlock_t umemlist_lock;			/* Spinlock to lock umem list operations */
 	struct list_head umem_list;			/* List of 'umem_list_entry's associated with this device */
 	atomic_t umem_count;				/* id for next umem entry */
-
+	struct miscdevice mdev;
+	char name[ PCIE_NAME_LEN ];
 
 } pcidriver_privdata_t;
 

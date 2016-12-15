@@ -152,12 +152,12 @@
 #include <linux/kernel.h>
 #include <linux/errno.h>
 #include <linux/fs.h>
-#include <linux/cdev.h>
 #include <linux/sysfs.h>
 #include <asm/atomic.h>
 #include <linux/pagemap.h>
 #include <linux/spinlock.h>
 #include <linux/list.h>
+#include <linux/miscdevice.h>
 
 #if LINUX_VERSION_CODE <= KERNEL_VERSION(3,16,0)
 	#include <asm/scatterlist.h>
@@ -209,9 +209,6 @@ MODULE_AUTHOR("Adrian Byszuk");
 MODULE_DESCRIPTION("BPM PCIe board driver");
 MODULE_LICENSE("GPL v2");
 
-/* Module class */
-static struct class_compat *pcidriver_class;
-
 /**
  *
  * Called when loading the driver
@@ -220,24 +217,6 @@ static struct class_compat *pcidriver_class;
 static int __init pcidriver_init(void)
 {
 	int err;
-
-	/* Initialize the device count */
-	atomic_set(&pcidriver_deviceCount, 0);
-
-	/* Allocate character device region dynamically */
-	if ((err = alloc_chrdev_region(&pcidriver_devt, MINORNR, MAXDEVICES, NODENAME)) != 0) {
-		mod_info("Couldn't allocate chrdev region. Module not loaded.\n");
-		goto init_alloc_fail;
-	}
-	mod_info("Major %d allocated to nodename '%s'\n", MAJOR(pcidriver_devt), NODENAME);
-
-	/* Register driver class */
-	pcidriver_class = class_create(THIS_MODULE, NODENAME);
-
-	if (IS_ERR(pcidriver_class)) {
-		mod_info("No sysfs support. Module not loaded.\n");
-		goto init_class_fail;
-	}
 
 	/* Register PCI driver. This function returns the number of devices on some
 	 * systems, therefore check for errors as < 0. */
@@ -251,10 +230,6 @@ static int __init pcidriver_init(void)
 	return 0;
 
 init_pcireg_fail:
-	class_destroy(pcidriver_class);
-init_class_fail:
-	unregister_chrdev_region(pcidriver_devt, MAXDEVICES);
-init_alloc_fail:
 	return err;
 }
 
@@ -267,10 +242,6 @@ static void __exit pcidriver_exit(void)
 {
 
 	pci_unregister_driver(&pcidriver_driver);
-	unregister_chrdev_region(pcidriver_devt, MAXDEVICES);
-
-	if (pcidriver_class != NULL)
-		class_destroy(pcidriver_class);
 
 	mod_info("Module unloaded\n");
 }
@@ -291,6 +262,20 @@ static struct pci_driver pcidriver_driver = {
 	.remove = pcidriver_remove,
 };
 
+/* Misc device */
+static int fpga_create_misc_device(pcidriver_privdata_t *priv)
+{
+	priv->mdev.minor = MISC_DYNAMIC_MINOR;
+	priv->mdev.fops = &pcidriver_fops;
+	priv->mdev.name = priv->name;
+	return misc_register(&priv->mdev);
+}
+
+static void fpga_destroy_misc_device(pcidriver_privdata_t *priv)
+{
+	misc_deregister(&priv->mdev);
+}
+
 /**
  *
  * This function is called when installing the driver for a device
@@ -300,9 +285,11 @@ static struct pci_driver pcidriver_driver = {
 static int pcidriver_probe(struct pci_dev *pdev, const struct pci_device_id *id)
 {
 	int err;
-	int devno;
+    long slot_number;
 	pcidriver_privdata_t *privdata;
-	int devid;
+
+	dev_info(&pdev->dev, " probe for device %04x:%04x\n",
+		pdev->bus->number, pdev->devfn);
 
 	/* At the moment there is no difference between these boards here, other than
 	 * printing a different message in the log.
@@ -317,13 +304,13 @@ static int pcidriver_probe(struct pci_dev *pdev, const struct pci_device_id *id)
 	else if ((id->vendor == PCIE_XILINX_VENDOR_ID) &&
 		(id->device == PCIE_ML605_DEVICE_ID))
 	{
-                /* It is a PCI-E Xilinx ML605 evaluation board */
+	/* It is a PCI-E Xilinx ML605 evaluation board */
 		mod_info("Found ML605 board at %s\n", dev_name(&pdev->dev));
 	}
 	else if ((id->vendor == PCIE_XILINX_VENDOR_ID) &&
 		(id->device == PCIE_AMC_DEV_ID))
 	{
-                /* It is a PCI-E Creotech uTCA AMC board */
+	/* It is a PCI-E Creotech uTCA AMC board */
 		mod_info("Found uTCA AMC board at %s\n", dev_name(&pdev->dev));
 	}
 	else
@@ -338,22 +325,15 @@ static int pcidriver_probe(struct pci_dev *pdev, const struct pci_device_id *id)
 		goto probe_pcien_fail;
 	}
 
-    /* Set bus master */
-    pci_set_master(pdev);
+	/* Set bus master */
+	pci_set_master(pdev);
 
-    err = pci_set_consistent_dma_mask(pdev, DMA_BIT_MASK(64));
-    if (err) {
-        err = pci_set_consistent_dma_mask(pdev, DMA_BIT_MASK(32));
-    }
-    if (err) {
-        dev_err(&pdev->dev, "No suitable DMA available");
-        goto probe_disable_device;
-    }
-	/* Get / Increment the device id */
-	devid = atomic_inc_return(&pcidriver_deviceCount) - 1;
-	if (devid >= MAXDEVICES) {
-		mod_info("Maximum number of devices reached! Increase MAXDEVICES.\n");
-		err = -ENOMSG;
+	err = pci_set_consistent_dma_mask(pdev, DMA_BIT_MASK(64));
+	if (err) {
+		err = pci_set_consistent_dma_mask(pdev, DMA_BIT_MASK(32));
+	}
+	if (err) {
+		dev_err(&pdev->dev, "No suitable DMA available");
 		goto probe_disable_device;
 	}
 
@@ -371,18 +351,28 @@ static int pcidriver_probe(struct pci_dev *pdev, const struct pci_device_id *id)
 	spin_lock_init(&(privdata->umemlist_lock));
 	atomic_set(&privdata->umem_count, 0);
 
-	pci_set_drvdata( pdev, privdata );
+	pci_set_drvdata(pdev, privdata);
 	privdata->pdev = pdev;
 
-	/* Device add to sysfs */
-	devno = MKDEV(MAJOR(pcidriver_devt), MINOR(pcidriver_devt) + devid);
-	privdata->devno = devno;
-	if (pcidriver_class != NULL) {
-		/* FIXME: some error checking missing here */
-		privdata->class_dev = class_device_create(pcidriver_class, NULL, devno, &(pdev->dev), NODENAMEFMT, MINOR(pcidriver_devt) + devid, privdata);
-		class_set_devdata( privdata->class_dev, privdata );
-		mod_info("Device /dev/%s%d added\n",NODENAME,MINOR(pcidriver_devt) + devid);
+#ifdef ENABLE_PHYSICAL_SLOT_NUMBER
+    /* Convert to decimal. Is this the right place to get the slot number? */
+	err = kstrtol(pdev->slot->kobj.name, 10, &slot_number);
+	if (err) {
+		dev_err(&privdata->pdev->dev, "Error converting slot number to decimal\n");
+		goto failed_conv_slot_number;
 	}
+
+	dev_info(&pdev->dev, "Creating device name "NODENAME"-%ld\n",
+		slot_number);
+	snprintf(privdata->name, PCIE_NAME_LEN, NODENAME"-%ld",
+		slot_number);
+#else
+	slot_number = privdata->pdev->bus->number << 8 | privdata->pdev->devfn;
+	dev_info(&pdev->dev, "Creating device name "NODENAME"-%04x\n",
+		slot_number);
+	snprintf(privdata->name, PCIE_NAME_LEN, NODENAME"-%04x",
+		slot_number);
+#endif
 
 	/* Setup mmaped BARs into kernel space */
 	if ((err = pcidriver_probe_irq(privdata)) != 0)
@@ -409,31 +399,51 @@ static int pcidriver_probe(struct pci_dev *pdev, const struct pci_device_id *id)
 	sysfs_attr(umem_unmap);
 	#undef sysfs_attr
 
-	/* Register character device */
-	cdev_init( &(privdata->cdev), &pcidriver_fops );
-#if LINUX_VERSION_CODE <= KERNEL_VERSION(2,6,35)
-	privdata->cdev.owner = THIS_MODULE;
-#endif
-	privdata->cdev.ops = &pcidriver_fops;
-	err = cdev_add( &privdata->cdev, devno, 1 );
+	init_completion(&privdata->user_comp);
+
+	/* The user refcount starts with one to inidicate an active device */
+	atomic_set(&privdata->user_refcount, 1);
+
+	mod_info_dbg("pcidriver_probe: user_refcount = %d\n", atomic_read(&privdata->user_refcount));
+
+	/* Device register */
+	err = fpga_create_misc_device(privdata);
 	if (err) {
-		mod_info( "Couldn't add character device.\n" );
-		goto probe_cdevadd_fail;
+		dev_err(&privdata->pdev->dev, "Error creating misc device\n");
+		goto failed_misc;
 	}
 
 	return 0;
 
+failed_misc:
 probe_device_create_fail:
-probe_cdevadd_fail:
 probe_irq_probe_fail:
 	pcidriver_irq_unmap_bars(privdata);
+#ifdef ENABLE_PHYSICAL_SLOT_NUMBER
+failed_conv_slot_number:
+#endif
+	pci_set_drvdata(pdev, NULL);
 	kfree(privdata);
 probe_nomem:
-	atomic_dec(&pcidriver_deviceCount);
 probe_disable_device:
 	pci_disable_device(pdev);
 probe_pcien_fail:
  	return err;
+}
+
+static void wait_for_clients(pcidriver_privdata_t *privdata)
+{
+	/*
+	 * Remove the device init value and complete the device if there is
+	 * no clients or wait for active clients to finish.
+	 */
+	if (atomic_dec_and_test(&privdata->user_refcount))
+		complete(&privdata->user_comp);
+
+	mod_info_dbg("wait_for_clients: waiting for completion. user_refcount = %d\n", 
+		atomic_read(&privdata->user_refcount));
+	wait_for_completion(&privdata->user_comp);
+	mod_info_dbg("wait_for_clients: finished waiting for completion\n");
 }
 
 /**
@@ -448,7 +458,14 @@ static void pcidriver_remove(struct pci_dev *pdev)
 	/* Get private data from the device */
 	privdata = pci_get_drvdata(pdev);
 
+	/* Removing the device from sysfs */
+	fpga_destroy_misc_device(privdata);
+
+	/* wait for existing user space clients to finish */
+	wait_for_clients(privdata);
+
 	/* Removing sysfs attributes from class device */
+#if 0
 	#define sysfs_attr(name) do { \
 			class_device_remove_file(sysfs_attr_def_pointer, &sysfs_attr_def_name(name)); \
 			} while (0)
@@ -466,6 +483,7 @@ static void pcidriver_remove(struct pci_dev *pdev)
 	sysfs_attr(umappings);
 	sysfs_attr(umem_unmap);
 	#undef sysfs_attr
+#endif
 
 	/* Free all allocated kmem buffers before leaving */
 	pcidriver_kmem_free_all( privdata );
@@ -474,11 +492,8 @@ static void pcidriver_remove(struct pci_dev *pdev)
 	pcidriver_remove_irq(privdata);
 #endif
 
-	/* Removing Character device */
-	cdev_del(&(privdata->cdev));
-
-	/* Removing the device from sysfs */
-	class_device_destroy(pcidriver_class, privdata->devno);
+	/* Unset privdata */
+	pci_set_drvdata(pdev, NULL);
 
 	/* Releasing privdata */
 	kfree(privdata);
@@ -521,10 +536,18 @@ static struct file_operations pcidriver_fops = {
 int pcidriver_open(struct inode *inode, struct file *filp)
 {
 	pcidriver_privdata_t *privdata;
-
 	/* Set the private data area for the file */
-	privdata = container_of( inode->i_cdev, pcidriver_privdata_t, cdev);
-	filp->private_data = privdata;
+	struct miscdevice *mdev_ptr = filp->private_data;
+	filp->private_data = container_of(mdev_ptr, pcidriver_privdata_t, mdev);
+
+	privdata = filp->private_data;
+
+	if (!atomic_inc_not_zero(&privdata->user_refcount)) {
+		mod_info_dbg("pcidriver_open: user_refcount = %d, should be > 0\n", atomic_read(&privdata->user_refcount));
+		return -ENXIO;
+	}
+
+	mod_info_dbg("pcidriver_open: user_refcount = %d\n", atomic_read(&privdata->user_refcount));
 
 	return 0;
 }
@@ -541,6 +564,11 @@ int pcidriver_release(struct inode *inode, struct file *filp)
 
 	/* Get the private data area */
 	privdata = filp->private_data;
+
+	if (atomic_dec_and_test(&privdata->user_refcount))
+		complete(&privdata->user_comp);
+
+	mod_info_dbg("pcidriver_release: user_refcount = %d\n", atomic_read(&privdata->user_refcount));
 
 	return 0;
 }

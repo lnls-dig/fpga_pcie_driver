@@ -18,6 +18,7 @@
 #include <linux/pagemap.h>
 #include <linux/sched.h>
 #include <linux/vmalloc.h>
+#include <linux/miscdevice.h>
 
 #include "config.h"			/* compile-time configuration */
 #include "compat.h"			/* compatibility definitions for older linux */
@@ -85,7 +86,7 @@ int pcidriver_umem_sgmap(pcidriver_privdata_t *privdata, umem_handle_t *umem_han
 
 	/* Get the page information */
 	down_read(&current->mm->mmap_sem);
-	res = get_user_pages(
+	res = get_user_pages_compat(
 				current,
 				current->mm,
 				umem_handle->vma,
@@ -173,7 +174,7 @@ umem_sgmap_unmap:
 				compat_unlock_page(pages[i]);
 			if (!PageReserved(pages[i]))
 				set_page_dirty(pages[i]);
-			page_cache_release(pages[i]);
+			page_cache_release_compat(pages[i]);
 		}
 	}
 	vfree(sg);
@@ -205,7 +206,7 @@ int pcidriver_umem_sgunmap(pcidriver_privdata_t *privdata, pcidriver_umem_entry_
 				compat_unlock_page(umem_entry->pages[i]);
 			}
 			/* and release it from the cache */
-			page_cache_release( umem_entry->pages[i] );
+			page_cache_release_compat( umem_entry->pages[i] );
 		}
 	}
 
