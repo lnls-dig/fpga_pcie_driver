@@ -170,7 +170,9 @@ int pcidriver_kmem_sync( pcidriver_privdata_t *privdata, kmem_sync_t *kmem_sync 
  */
 int pcidriver_kmem_free_entry(pcidriver_privdata_t *privdata, pcidriver_kmem_entry_t *kmem_entry)
 {
+#if 0
 	pcidriver_sysfs_remove(privdata, &(kmem_entry->sysfs_attr));
+#endif
 
 	/* Go over the pages of the kmem buffer, and mark them as not reserved */
 #if 0
