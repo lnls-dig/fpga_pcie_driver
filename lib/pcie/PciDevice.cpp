@@ -60,7 +60,7 @@ PciDevice::PciDevice(int number)
 	unsigned int temp;
 
 	device = number;
-	snprintf(name, sizeof(name), "/dev/fpga%d", number);
+	snprintf(name, sizeof(name), "/dev/fpga-%d", number);
 
 	if (stat(name, &tmp_stat) < 0)
 		throw Exception( Exception::DEVICE_NOT_FOUND );
