@@ -378,6 +378,22 @@ static int pcidriver_probe(struct pci_dev *pdev, const struct pci_device_id *id)
 	if ((err = pcidriver_probe_irq(privdata)) != 0)
 		goto probe_irq_probe_fail;
 
+	init_completion(&privdata->user_comp);
+
+	/* The user refcount starts with one to inidicate an active device */
+	atomic_set(&privdata->user_refcount, 1);
+
+	mod_info_dbg("pcidriver_probe: user_refcount = %d\n", atomic_read(&privdata->user_refcount));
+
+	/* Device register */
+	err = fpga_create_misc_device(privdata);
+	if (err) {
+		dev_err(&privdata->pdev->dev, "Error creating misc device\n");
+		goto failed_misc;
+	}
+
+	/* This must come after device creation as it uses misc->this_device to create
+	 * sysfs */
 	/* Populate sysfs attributes for the class device */
 	/* TODO: correct errorhandling. ewww. must remove the files in reversed order :-( */
 	#define sysfs_attr(name) do { \
@@ -399,24 +415,11 @@ static int pcidriver_probe(struct pci_dev *pdev, const struct pci_device_id *id)
 	sysfs_attr(umem_unmap);
 	#undef sysfs_attr
 
-	init_completion(&privdata->user_comp);
-
-	/* The user refcount starts with one to inidicate an active device */
-	atomic_set(&privdata->user_refcount, 1);
-
-	mod_info_dbg("pcidriver_probe: user_refcount = %d\n", atomic_read(&privdata->user_refcount));
-
-	/* Device register */
-	err = fpga_create_misc_device(privdata);
-	if (err) {
-		dev_err(&privdata->pdev->dev, "Error creating misc device\n");
-		goto failed_misc;
-	}
-
 	return 0;
 
-failed_misc:
 probe_device_create_fail:
+	fpga_destroy_misc_device(privdata);
+failed_misc:
 probe_irq_probe_fail:
 	pcidriver_irq_unmap_bars(privdata);
 #ifdef ENABLE_PHYSICAL_SLOT_NUMBER
@@ -458,14 +461,7 @@ static void pcidriver_remove(struct pci_dev *pdev)
 	/* Get private data from the device */
 	privdata = pci_get_drvdata(pdev);
 
-	/* Removing the device from sysfs */
-	fpga_destroy_misc_device(privdata);
-
-	/* wait for existing user space clients to finish */
-	wait_for_clients(privdata);
-
 	/* Removing sysfs attributes from class device */
-#if 0
 	#define sysfs_attr(name) do { \
 			class_device_remove_file(sysfs_attr_def_pointer, &sysfs_attr_def_name(name)); \
 			} while (0)
@@ -483,10 +479,15 @@ static void pcidriver_remove(struct pci_dev *pdev)
 	sysfs_attr(umappings);
 	sysfs_attr(umem_unmap);
 	#undef sysfs_attr
-#endif
 
 	/* Free all allocated kmem buffers before leaving */
 	pcidriver_kmem_free_all( privdata );
+
+	/* Removing the device from sysfs */
+	fpga_destroy_misc_device(privdata);
+
+	/* wait for existing user space clients to finish */
+	wait_for_clients(privdata);
 
 #ifdef ENABLE_IRQ
 	pcidriver_remove_irq(privdata);
