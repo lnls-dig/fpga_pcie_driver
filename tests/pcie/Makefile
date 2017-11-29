@@ -27,6 +27,7 @@ CFLAGS += -O2 -g
 CXXFLAGS += -O2 -g
 
 INCDIR = ../../include/pcie
+LIBDIR = /usr/lib
 LDINC += $(addprefix -L ,$(LIBDIR))
 LDFLAGS += -lpcidriver -lpthread 
 LDFLAGS_BOOST = -lboost_timer -lboost_system
@@ -39,6 +40,7 @@ CXXFLAGS += $(addprefix -I,i $(INCDIR))
 BINARIES = testCppInterface \
 	testDMA \
 	testPciDriver \
+	testPciDriverMod \
 	testCinterface \
 	benchmarkDevice
 
@@ -65,6 +67,10 @@ $(BINDIR)/benchmarkDevice: benchmarkDevice.cpp
 	$(Q)$(CC) $(LDINC) $(LDFLAGS) $(LDFLAGS_BOOST) $(CFLAGS) -o $@ $<
 
 $(BINDIR)/testCinterface: testCinterface.c
+	@echo -e "LD \t$@"
+	$(Q)$(CC) $(LDINC) $(LDFLAGS) $(CFLAGS) -o $@ $<
+
+$(BINDIR)/testPciDriverMod: testPciDriverMod.c
 	@echo -e "LD \t$@"
 	$(Q)$(CC) $(LDINC) $(LDFLAGS) $(CFLAGS) -o $@ $<
 
