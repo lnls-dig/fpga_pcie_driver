@@ -58,23 +58,23 @@ dirs:
 $(BINARIES) : % : $(BINDIR)/% ;
 
 # Target for each exec from the object file
-$(BINDIR)/%: %.cpp
+$(BINDIR)/%: %.cpp dirs
 	@echo -e "LD \t$@"
 	$(Q)$(CXX) $(LDINC) $(LDFLAGS) $(CXXFLAGS) -o $@ $<
 
-$(BINDIR)/benchmarkDevice: benchmarkDevice.cpp
+$(BINDIR)/benchmarkDevice: benchmarkDevice.cpp dirs
 	@echo -e "LD \t$@"
 	$(Q)$(CC) $(LDINC) $(LDFLAGS) $(LDFLAGS_BOOST) $(CFLAGS) -o $@ $<
 
-$(BINDIR)/testCinterface: testCinterface.c
+$(BINDIR)/testCinterface: testCinterface.c dirs
 	@echo -e "LD \t$@"
 	$(Q)$(CC) $(LDINC) $(LDFLAGS) $(CFLAGS) -o $@ $<
 
-$(BINDIR)/testPciDriverMod: testPciDriverMod.c
+$(BINDIR)/testPciDriverMod: testPciDriverMod.c dirs
 	@echo -e "LD \t$@"
 	$(Q)$(CC) $(LDINC) $(LDFLAGS) $(CFLAGS) -o $@ $<
 
-$(BINDIR)/testPciDriver: testPciDriver.c
+$(BINDIR)/testPciDriver: testPciDriver.c dirs
 	@echo -e "LD \t$@"
 	$(Q)$(CC) $(LDINC) $(LDFLAGS) $(CFLAGS) -o $@ $<
 
