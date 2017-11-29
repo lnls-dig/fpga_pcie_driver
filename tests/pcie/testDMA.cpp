@@ -122,13 +122,16 @@ private:
 	BDA *lod;
 };
 
-int main()
+int main(int argc, char *argv[])
 {
 	int i;
 
-	for(i=0;i<4;i++) {
-		testDevice( i );
+	if (argc < 2) {
+		cout << "Missing device number" << endl;
+		return 0;
 	}
+
+	testDevice(strtoul(argv[1], NULL, 10));
 
 	return 0;
 }
