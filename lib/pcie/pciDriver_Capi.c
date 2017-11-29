@@ -73,7 +73,7 @@ int pd_open( int dev, pd_device_t *pci_handle, const char *dev_entry )
         snprintf( pci_handle->name, sizeof( pci_handle->name ), "%s", dev_entry );
     }
     else {
-        snprintf( pci_handle->name, sizeof( pci_handle->name ), "/dev/fpga%d", dev );
+        snprintf( pci_handle->name, sizeof( pci_handle->name ), "/dev/fpga-%d", dev );
     }
 
     ret = open( pci_handle->name, O_RDWR );
