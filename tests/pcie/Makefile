@@ -28,7 +28,8 @@ CXXFLAGS += -O2 -g
 
 INCDIR = ../../include/pcie
 LDINC += $(addprefix -L ,$(LIBDIR))
-LDFLAGS += -lpcidriver -lpthread -lboost_timer -lboost_system
+LDFLAGS += -lpcidriver -lpthread 
+LDFLAGS_BOOST = -lboost_timer -lboost_system
 
 BINDIR = bin
 
@@ -58,6 +59,10 @@ $(BINARIES) : % : $(BINDIR)/% ;
 $(BINDIR)/%: %.cpp
 	@echo -e "LD \t$@"
 	$(Q)$(CXX) $(LDINC) $(LDFLAGS) $(CXXFLAGS) -o $@ $<
+
+$(BINDIR)/benchmarkDevice: benchmarkDevice.cpp
+	@echo -e "LD \t$@"
+	$(Q)$(CC) $(LDINC) $(LDFLAGS) $(LDFLAGS_BOOST) $(CFLAGS) -o $@ $<
 
 $(BINDIR)/testCinterface: testCinterface.c
 	@echo -e "LD \t$@"
