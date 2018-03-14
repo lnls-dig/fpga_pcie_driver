@@ -42,7 +42,8 @@ BINARIES = testCppInterface \
 	testPciDriver \
 	testPciDriverMod \
 	testCinterface \
-	benchmarkDevice
+	benchmarkDevice \
+        regAccess
 
 ###############################################################
 # Target definitions
@@ -75,6 +76,10 @@ $(BINDIR)/testPciDriverMod: testPciDriverMod.c dirs
 	$(Q)$(CC) $(LDINC) $(LDFLAGS) $(CFLAGS) -o $@ $<
 
 $(BINDIR)/testPciDriver: testPciDriver.c dirs
+	@echo -e "LD \t$@"
+	$(Q)$(CC) $(LDINC) $(LDFLAGS) $(CFLAGS) -o $@ $<
+
+$(BINDIR)/regAccess: regAccess.c dirs
 	@echo -e "LD \t$@"
 	$(Q)$(CC) $(LDINC) $(LDFLAGS) $(CFLAGS) -o $@ $<
 
