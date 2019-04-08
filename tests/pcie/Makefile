@@ -29,7 +29,7 @@ CXXFLAGS += -O2 -g
 INCDIR = ../../include/pcie
 LIBDIR = /usr/lib
 LDINC += $(addprefix -L ,$(LIBDIR))
-LDFLAGS += -lpcidriver -lpthread 
+LDFLAGS += -lpcidriver -lpthread
 LDFLAGS_BOOST = -lboost_timer -lboost_system
 
 BINDIR = bin
