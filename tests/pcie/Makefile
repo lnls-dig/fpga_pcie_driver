@@ -61,27 +61,27 @@ $(BINARIES) : % : $(BINDIR)/% ;
 # Target for each exec from the object file
 $(BINDIR)/%: %.cpp dirs
 	@echo -e "LD \t$@"
-	$(Q)$(CXX) $(LDINC) $(LDFLAGS) $(CXXFLAGS) -o $@ $<
+	$(Q)$(CXX) $(LDINC) $(CXXFLAGS) -o $@ $< $(LDFLAGS)
 
 $(BINDIR)/benchmarkDevice: benchmarkDevice.cpp dirs
 	@echo -e "LD \t$@"
-	$(Q)$(CC) $(LDINC) $(LDFLAGS) $(LDFLAGS_BOOST) $(CFLAGS) -o $@ $<
+	$(Q)$(CC) $(LDINC) $(LDFLAGS_BOOST) $(CFLAGS) -o $@ $< $(LDFLAGS)
 
 $(BINDIR)/testCinterface: testCinterface.c dirs
 	@echo -e "LD \t$@"
-	$(Q)$(CC) $(LDINC) $(LDFLAGS) $(CFLAGS) -o $@ $<
+	$(Q)$(CC) $(LDINC) $(CFLAGS) -o $@ $< $(LDFLAGS)
 
 $(BINDIR)/testPciDriverMod: testPciDriverMod.c dirs
 	@echo -e "LD \t$@"
-	$(Q)$(CC) $(LDINC) $(LDFLAGS) $(CFLAGS) -o $@ $<
+	$(Q)$(CC) $(LDINC) $(CFLAGS) -o $@ $< $(LDFLAGS)
 
 $(BINDIR)/testPciDriver: testPciDriver.c dirs
 	@echo -e "LD \t$@"
-	$(Q)$(CC) $(LDINC) $(LDFLAGS) $(CFLAGS) -o $@ $<
+	$(Q)$(CC) $(LDINC) $(CFLAGS) -o $@ $< $(LDFLAGS)
 
 $(BINDIR)/regAccess: regAccess.c dirs
 	@echo -e "LD \t$@"
-	$(Q)$(CC) $(LDINC) $(LDFLAGS) $(CFLAGS) -o $@ $<
+	$(Q)$(CC) $(LDINC) $(CFLAGS) -o $@ $< $(LDFLAGS)
 
 clean:
 	@echo -e "CLEAN \t$(shell pwd)"
