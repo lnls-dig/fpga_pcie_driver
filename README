@@ -1,30 +1,40 @@
-PCIE driver for FPGA device
+# PCIE driver for FPGA device
 
-1.1. Overview
+## Overview
 
-This driver is based on original driver for the PCIe SG DMA project
-placed at the opencores.org
-The driver is mostly in maintenance state. Changes cover mostly updating driver
-to work with newer kernels and deleting support for really old kernels (which
-obfuscates the code). Also, with present makefiles it's easier to cross-compile
-code (e.g. using buildroot).
+This driver is based on original driver for the PCIe SG DMA project placed at
+the opencores.org. It is mostly in maintenance state. Changes cover mostly
+updating driver to work with newer kernels and deleting support for really
+old kernels (which obfuscates the code). Also, with present makefiles it's
+easier to cross-compile code (e.g. using buildroot).
 
 It consists of two parts:
-- kernel driver at driver/pcie
-- c/c++ library at lib/pcie
-Plus basic test units for driver, lib & hardware testing
-All relevant includes are in include/pcie folder.
 
-1.2. INSTALL
+- kernel driver at `driver/pcie`
+- c/c++ library at `lib/pcie`
 
-To compile and install kernel driver go to driver/pcie and issue 'make && make install'
+Tests are located at tests  folder.
 
-To install library go to lib/pcie and type 'make && make install'
+Include files are in `include/pcie` folder.
 
-1.3. TODO
+## Install
 
-- test interrupt support
-- make HW tests more friendly to causal user, stop them from spewing out
+To compile and install kernel driver:
+
+```bash
+make kernel_driver
+sudo make kernel_driver_install
+```
+
+To compile and install the library:
+
+```bash
+make kernel_lib
+sudo make kernel_lib_install
+```
+
+## ToDo List
+
+- Test interrupt support
+- Make HW tests more friendly to causal user, stop them from spewing out
 thousand of hex output lines
-- any changes that will be required
-
