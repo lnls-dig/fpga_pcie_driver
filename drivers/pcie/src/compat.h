@@ -197,9 +197,20 @@ static inline void set_pages_reserved_compat(unsigned long cpua, unsigned long s
 #endif
 }
 
-/* Kernelk 4.6.0 change get_user_pages () to get_user_pages_remote () */
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(4,6,0)
-#define get_user_pages_compat get_user_pages_remote
+/* Kernel 4.10.0 added locked parameter */
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4,10,0)
+#define get_user_pages_compat(tsk, mm, start, nr_pages, write, force, pages, vmas)  \
+    get_user_pages_remote(tsk, mm, start, nr_pages, ((write)? FOLL_WRITE : 0) | \
+            ((force)? FOLL_FORCE : 0), pages, vmas, NULL)
+/* Kernel 4.9.0 replaced write, force parameters to gup_flags */
+#elif LINUX_VERSION_CODE >= KERNEL_VERSION(4,9,0)
+#define get_user_pages_compat(tsk, mm, start, nr_pages, write, force, pages, vmas)  \
+    get_user_pages_remote(tsk, mm, start, nr_pages, ((write)? FOLL_WRITE : 0) | \
+            ((force)? FOLL_FORCE : 0), pages, vmas)
+/* Kernel 4.6.0 change get_user_pages () to get_user_pages_remote () */
+#elif LINUX_VERSION_CODE >= KERNEL_VERSION(4,6,0)
+#define get_user_pages_compat(tsk, mm, start, nr_pages, write, force, pages, vmas)  \
+    get_user_pages_remote(tsk, mm, start, nr_pages, write, force, pages, vmas)
 #else
 #define get_user_pages_compat get_user_pages
 #endif
