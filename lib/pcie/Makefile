@@ -39,7 +39,7 @@ all: $(LIB) $(LIBSTATIC)
 $(LIB): $(OBJ)
 	@echo "## Creating dynamic library ##"
 	@echo -e "LD [.so] \t$@"
-	$(Q)$(CXX) -shared $(LDINC) $(LDFLAGS) $(CXXFLAGS) -o $@ $^
+	$(Q)$(CXX) -shared -Wl,-soname,$@ $(LDINC) $(LDFLAGS) $(CXXFLAGS) -o $@ $^
 
 # Target for static the library
 $(LIBSTATIC): $(OBJ)
