@@ -7,11 +7,8 @@ INSTALLDIR ?= /lib/modules/$(shell uname -r)/extra
 INSTALLHDRDIR ?= /usr/include/pciDriver/driver
 PWD := $(shell pwd)
 
-default: dolink
+default:
 	$(MAKE) -C $(KERNELDIR) M=$(PWD) modules
-
-dolink:
-	@ln -sf ../../../include/pcie/driver/pciDriver.h
 
 install:
 	@mkdir -p $(INSTALLDIR)
