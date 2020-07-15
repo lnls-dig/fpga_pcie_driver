@@ -1,6 +1,18 @@
 #ifndef PCIDRIVER_H_
 #define PCIDRIVER_H_
 
+/* version macros for compile-time API detection */
+
+#define PCIEDRIVER_VERSION_MAJOR 1
+#define PCIEDRIVER_VERSION_MINOR 0
+#define PCIEDRIVER_VERSION_PATCH 7
+
+#define PCIEDRIVER_MAKE_VERSION(major, minor, patch) \
+    ((major) * 10000 + (minor) * 100 + (patch))
+#define PCIEDRIVER_VERSION \
+    PCIEDRIVER_MAKE_VERSION(PCIEDRIVER_VERSION_MAJOR, PCIEDRIVER_VERSION_MINOR, \
+            PCIEDRIVER_VERSION_PATCH)
+
 /**
  * This is a full rewrite of the pciDriver.
  * New default is to support kernel 2.6, using kernel 2.6 APIs.
