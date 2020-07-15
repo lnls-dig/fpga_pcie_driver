@@ -9,3 +9,6 @@ Module.symvers
 modules.order
 .tmp_versions/
 .*.cmd
+
+# generated files
+dkms.conf
