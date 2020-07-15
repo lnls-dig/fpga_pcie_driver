@@ -12,7 +12,7 @@ PWD := $(shell pwd)
 
 DKMS_FILES := $(wildcard *.h) $(wildcard *c) dkms.conf Makefile version.sh
 
-default: dkms.conf
+default:
 	$(MAKE) -C $(KERNELDIR) M=$(PWD) VERSION=$(VERSION) modules
 
 dkms.conf: dkms.conf.in
