@@ -2,6 +2,7 @@
 
 CC = gcc
 CXX = g++
+LN = ln
 
 override CFLAGS += -O2 -g -fPIC
 override CXXFLAGS += -O2 -g -fPIC
@@ -41,7 +42,8 @@ all: $(LIB) $(LIBSTATIC)
 $(LIB): $(OBJ)
 	@echo "## Creating dynamic library ##"
 	@echo -e "LD [.so] \t$@"
-	$(Q)$(CXX) -shared -Wl,-soname,$@.$(SOVERSION) $(LDINC) $(LDFLAGS) $(CXXFLAGS) -o $@ $^
+	$(Q)$(CXX) -shared -Wl,-soname,$@.$(SOVERSION) $(LDINC) $(LDFLAGS) $(CXXFLAGS) -o $@.$(SOVERSION) $^
+	$(Q)$(LN) -s $@.$(SOVERSION) $@
 
 # Target for static the library
 $(LIBSTATIC): $(OBJ)
@@ -60,6 +62,7 @@ $(LIBSTATIC): $(OBJ)
 
 install:
 	@echo "INSTALL libpcidriver.so"
+	-$(Q)install -m 755 $(LIB).$(SOVERSION) $(PREFIX)/lib/
 	-$(Q)install -m 755 $(LIB) $(PREFIX)/lib/
 	@echo "INSTALL libpcidriver.a"
 	-$(Q)install -m 755 $(LIBSTATIC) $(PREFIX)/lib/
@@ -70,6 +73,7 @@ install:
 uninstall:
 	@echo "UNINSTALL libpcidriver.so"
 	-$(Q)rm -f $(PREFIX)/lib/libpcidriver.so
+	-$(Q)rm -f $(PREFIX)/lib/libpcidriver.so.1
 	@echo "UNINSTALL libpcidriver.a"
 	-$(Q)rm -f $(PREFIX)/lib/libpcidriver.a
 	@echo "UNINSTALL $(PREFIX)/include/pciDriver/lib"
@@ -78,5 +82,5 @@ uninstall:
 
 clean:
 	@echo -e "CLEAN \t$(shell pwd)"
-	-$(Q)rm -f $(LIB) $(LIBSTATIC)
+	-$(Q)rm -f $(LIB) $(LIB).$(SOVERSION) $(LIBSTATIC)
 	-$(Q)rm -f $(OBJ)
