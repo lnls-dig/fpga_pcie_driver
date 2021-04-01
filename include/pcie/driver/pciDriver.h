@@ -5,7 +5,7 @@
 
 #define PCIEDRIVER_VERSION_MAJOR 1
 #define PCIEDRIVER_VERSION_MINOR 0
-#define PCIEDRIVER_VERSION_PATCH 9
+#define PCIEDRIVER_VERSION_PATCH 10
 
 #define PCIEDRIVER_MAKE_VERSION(major, minor, patch) \
     ((major) * 10000 + (minor) * 100 + (patch))
